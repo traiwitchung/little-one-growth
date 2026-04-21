@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Little One" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#f472b6" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#17131f" media="(prefers-color-scheme: dark)" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icon-180.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+<title>Little One · Growth Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class' };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<style>
+  :root {
+    --bg: #fff5ef;
+    --bg2: #fde7e2;
+    --surface: #ffffff;
+    --surface-2: #fff9f5;
+    --ink: #3d2f4a;
+    --ink-soft: #7a6b82;
+    --line: #f2e3dc;
+    --primary: #f472b6;
+    --primary-ink: #be185d;
+    --accent: #a78bfa;
+    --mint: #86efac;
+    --sky: #7dd3fc;
+    --sun: #fcd34d;
+    --chart-grid: rgba(124,107,143,.12);
+    --chart-band: #fde7e2;
+  }
+  html.dark {
+    --bg: #17131f;
+    --bg2: #231b30;
+    --surface: #261e34;
+    --surface-2: #2d2340;
+    --ink: #f5e8f6;
+    --ink-soft: #b9a7c9;
+    --line: #3a2d4f;
+    --primary: #f9a8d4;
+    --primary-ink: #fbcfe8;
+    --accent: #c4b5fd;
+    --mint: #6ee7b7;
+    --sky: #93c5fd;
+    --sun: #fde68a;
+    --chart-grid: rgba(245,232,246,.08);
+    --chart-band: rgba(249,168,212,.08);
+  }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Nunito', system-ui, sans-serif; }
+  body {
+    background-image:
+      radial-gradient(1200px 600px at 85% -10%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%);
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .serif { font-family: 'Fraunces', serif; font-optical-sizing:auto; letter-spacing:-.01em; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--primary) 10%, transparent),
+                0 10px 40px -20px color-mix(in oklab, var(--primary) 30%, transparent);
+    transition: background .2s, border-color .2s;
+  }
+  .soft-card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 20px; }
+  .muted { color: var(--ink-soft); }
+  .chip {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.2rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700;
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+    color: var(--primary-ink);
+  }
+  .chip.mint { background: color-mix(in oklab, var(--mint) 22%, transparent); color: color-mix(in oklab, var(--mint) 50%, var(--ink)); }
+  .chip.sky  { background: color-mix(in oklab, var(--sky) 22%, transparent);  color: color-mix(in oklab, var(--sky) 50%, var(--ink)); }
+  .chip.sun  { background: color-mix(in oklab, var(--sun) 30%, transparent);  color: color-mix(in oklab, var(--sun) 50%, var(--ink)); }
+  .chip.accent { background: color-mix(in oklab, var(--accent) 22%, transparent); color: color-mix(in oklab, var(--accent) 50%, var(--ink)); }
+
+  .tab-btn {
+    padding:.55rem 1rem; border-radius:999px; font-weight:700; font-size:.85rem;
+    color: var(--ink-soft); background: transparent; transition:.18s;
+    display:inline-flex; align-items:center; gap:.4rem;
+  }
+  .tab-btn:hover{ background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--ink); }
+  .tab-btn.active{
+    background: color-mix(in oklab, var(--primary) 20%, var(--surface));
+    color: var(--primary-ink);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+
+  .btn { display:inline-flex; align-items:center; gap:.4rem; font-weight:700; border-radius:14px; padding:.6rem 1rem; transition:.15s; font-size:.85rem; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 60%, var(--accent)));
+    color: white;
+    box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--primary) 60%, transparent);
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); }
+  .btn-ghost:hover { background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--ink); }
+  .btn-danger { color: #e11d48; }
+  html.dark .btn-danger { color: #fda4af; }
+  .btn-danger:hover { background: color-mix(in oklab, #e11d48 14%, transparent); }
+
+  .fld {
+    width:100%; border-radius:14px; padding:.6rem .8rem; font-size:.9rem; font-weight:500;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    transition: .15s;
+  }
+  .fld:focus { outline:none; border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 22%, transparent); }
+  select.fld { appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%); background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%; background-size: 5px 5px; background-repeat:no-repeat; padding-right:2rem; }
+
+  table.tbl { width:100%; font-size:.88rem; }
+  table.tbl th { text-align:left; font-weight:700; color:var(--ink-soft); padding:.55rem .65rem; border-bottom:1px solid var(--line); font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; }
+  table.tbl td { padding:.65rem .65rem; border-bottom:1px solid var(--line); }
+  table.tbl tr:hover td { background: color-mix(in oklab, var(--primary) 6%, transparent); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Floaty decoration */
+  .float { animation: float 6s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  .mascot {
+    width:44px; height:44px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, #fff, color-mix(in oklab, var(--primary) 40%, white));
+    display:flex; align-items:center; justify-content:center; font-size:26px;
+    box-shadow: 0 6px 18px -6px color-mix(in oklab, var(--primary) 55%, transparent), inset 0 -3px 0 color-mix(in oklab, var(--primary) 20%, transparent);
+  }
+  html.dark .mascot {
+    background: radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--primary) 60%, #2a1f3d), #2a1f3d);
+  }
+
+  .theme-toggle {
+    width:52px; height:30px; border-radius:999px; background: var(--surface-2);
+    border:1px solid var(--line); position:relative; cursor:pointer; transition:.2s;
+  }
+  .theme-toggle::after {
+    content:''; position:absolute; top:3px; left:3px; width:22px; height:22px;
+    border-radius:50%; background: linear-gradient(135deg, var(--sun), var(--primary));
+    transition:.25s cubic-bezier(.5,.2,.2,1);
+    box-shadow: 0 3px 8px -2px color-mix(in oklab, var(--primary) 50%, transparent);
+  }
+  html.dark .theme-toggle::after { left:27px; background: linear-gradient(135deg, var(--accent), var(--sky)); }
+
+  .ribbon { height:6px; border-radius:999px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--sky), var(--mint), var(--sun));
+    opacity:.6;
+  }
+
+  details summary::-webkit-details-marker { display:none; }
+  details summary { cursor: pointer; list-style: none; }
+
+  .sparkle {
+    position:absolute; pointer-events:none;
+    width:10px; height:10px;
+    background: radial-gradient(circle, var(--sun) 0%, transparent 70%);
+    border-radius:50%;
+    animation: sparkle 3s ease-in-out infinite;
+  }
+  @keyframes sparkle { 0%,100%{opacity:0; transform:scale(.6)} 50%{opacity:.9; transform:scale(1)} }
+</style>
+</head>
+<body>
+<div class="max-w-7xl mx-auto px-4 py-7">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-6 gap-4 flex-wrap">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <div class="mascot float">🍼</div>
+        <span class="sparkle" style="top:-6px; right:-4px;"></span>
+        <span class="sparkle" style="bottom:-2px; left:-6px; animation-delay:1s;"></span>
+      </div>
+      <div>
+        <h1 class="serif text-3xl font-bold leading-tight">Little One <span class="muted font-normal">· growth tracker</span></h1>
+        <p class="text-sm muted">Watching your baby bloom, one measurement at a time.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="exportBtn" class="btn btn-ghost" title="Download JSON backup">⤓ Export</button>
+      <button id="importBtn" class="btn btn-ghost" title="Restore from JSON">⤒ Import</button>
+      <input id="importFile" type="file" accept="application/json" class="hidden"/>
+      <button id="resetBtn" class="btn btn-danger" title="Delete everything">Reset</button>
+      <div id="themeToggle" class="theme-toggle ml-1" title="Toggle dark / light"></div>
+    </div>
+  </header>
+
+  <div class="ribbon mb-6"></div>
+
+  <!-- Profile -->
+  <section class="card p-5 mb-5">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="chip accent">👶 profile</span>
+      <span id="ageBadge" class="text-sm muted"></span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <label class="text-sm">
+        <div class="muted text-xs font-bold mb-1.5">Baby's name</div>
+        <input id="babyName" class="fld" placeholder="e.g. Kanya"/>
+      </label>
+      <label class="text-sm">
+        <div class="muted text-xs font-bold mb-1.5">Sex</div>
+        <select id="babySex" class="fld">
+          <option value="boy">💙 Boy</option>
+          <option value="girl">💗 Girl</option>
+        </select>
+      </label>
+      <label class="text-sm">
+        <div class="muted text-xs font-bold mb-1.5">Date of birth 🎂</div>
+        <input id="babyDob" type="date" class="fld"/>
+      </label>
+      <label class="text-sm">
+        <div class="muted text-xs font-bold mb-1.5">Growth reference</div>
+        <select id="sourceSel" class="fld">
+          <option value="WHO">🌏 WHO (International · used in AU)</option>
+          <option value="CDC">🇺🇸 CDC 2000 (United States)</option>
+        </select>
+      </label>
+      <label class="text-sm">
+        <div class="muted text-xs font-bold mb-1.5">X-axis</div>
+        <select id="xAxisSel" class="fld">
+          <option value="days">Age (days)</option>
+          <option value="weeks">Age (weeks)</option>
+          <option value="months">Age (months)</option>
+          <option value="date">Calendar date</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <div class="flex items-center gap-2 mb-4 flex-wrap">
+    <button data-metric="weight" class="tab-btn active">⚖️ Weight</button>
+    <button data-metric="length" class="tab-btn">📏 Length</button>
+    <button data-metric="head"   class="tab-btn">🧠 Head</button>
+    <div class="ml-auto flex items-center gap-2 text-xs flex-wrap">
+      <span class="chip mint">● P50 median</span>
+      <span class="chip">● P3–P97 band</span>
+      <span class="chip accent">● measurements</span>
+    </div>
+  </div>
+
+  <!-- Chart + Entry -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <section class="card p-5 lg:col-span-2">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <h2 id="chartTitle" class="serif text-xl font-bold">Weight for age</h2>
+        <div class="flex items-center gap-2">
+          <div id="latestStat" class="text-sm muted"></div>
+          <button id="resetZoomBtn" class="btn btn-ghost" title="Reset zoom">⟲ Reset zoom</button>
+        </div>
+      </div>
+      <div class="relative" style="height:460px"><canvas id="chart"></canvas></div>
+      <p class="text-xs muted mt-3 flex items-center gap-2">✨ <span>Scroll to zoom · drag to pan · pinch on touch. Curves from published LMS tables — not a substitute for your paediatrician.</span></p>
+    </section>
+
+    <section class="card p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="chip sun">🧸 new measurement</span>
+      </div>
+      <div class="space-y-3">
+        <label class="block text-sm">
+          <div class="muted text-xs font-bold mb-1.5">When?</div>
+          <input id="mDate" type="date" class="fld"/>
+        </label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="text-sm">
+            <div class="muted text-xs font-bold mb-1.5">⚖️ kg</div>
+            <input id="mWeight" type="number" step="0.01" min="0" placeholder="3.20" class="fld num"/>
+          </label>
+          <label class="text-sm">
+            <div class="muted text-xs font-bold mb-1.5">📏 cm</div>
+            <input id="mLength" type="number" step="0.1" min="0" placeholder="50.0" class="fld num"/>
+          </label>
+          <label class="text-sm">
+            <div class="muted text-xs font-bold mb-1.5">🧠 cm</div>
+            <input id="mHead" type="number" step="0.1" min="0" placeholder="35.0" class="fld num"/>
+          </label>
+        </div>
+        <label class="block text-sm">
+          <div class="muted text-xs font-bold mb-1.5">Note <span class="muted font-normal">(optional)</span></div>
+          <input id="mNote" type="text" placeholder="e.g. after feed 💤" class="fld"/>
+        </label>
+        <div class="flex gap-2 pt-1">
+          <button id="addBtn" class="btn btn-primary flex-1 justify-center">💖 Save entry</button>
+          <button id="clearFormBtn" class="btn btn-ghost">Clear</button>
+        </div>
+      </div>
+
+      <!-- Tiny summary -->
+      <div id="miniSummary" class="mt-5 pt-4 border-t" style="border-color:var(--line)"></div>
+    </section>
+  </div>
+
+  <!-- Data table -->
+  <section class="card p-5 mt-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <h2 class="serif text-xl font-bold">Growth diary</h2>
+        <span id="entryCount" class="chip">0 entries</span>
+      </div>
+      <span class="muted text-xs hidden md:block">percentiles shown assume reference / sex chosen above</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="tbl num">
+        <thead>
+          <tr>
+            <th>Date</th><th>Age</th>
+            <th>⚖️ Weight</th><th>%ile</th>
+            <th>📏 Length</th><th>%ile</th>
+            <th>🧠 Head</th><th>%ile</th>
+            <th>Note</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="10" class="muted text-center py-8">
+            <div class="text-3xl mb-2">🌱</div>
+            Nothing here yet — add your first measurement above to start the journey.
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="text-center text-xs muted mt-8">Made with 💕 for tiny humans</p>
+
+</div>
+
+<script>
+/* ================= LMS data (WHO + CDC, 0–24 months) ================= */
+const LMS = {
+  WHO: {
+    boy: {
+      weight:[
+        [0.3487,3.3464,0.14602],[0.2297,4.4709,0.13395],[0.1970,5.5675,0.12385],
+        [0.1738,6.3762,0.11727],[0.1553,7.0023,0.11316],[0.1395,7.5105,0.11080],
+        [0.1257,7.9340,0.10958],[0.1134,8.2970,0.10902],[0.1021,8.6151,0.10882],
+        [0.0917,8.9014,0.10881],[0.0820,9.1649,0.10891],[0.0730,9.4122,0.10906],
+        [0.0644,9.6479,0.10925],[0.0563,9.8749,0.10949],[0.0487,10.0953,0.10976],
+        [0.0413,10.3108,0.11007],[0.0343,10.5228,0.11041],[0.0275,10.7319,0.11079],
+        [0.0211,10.9385,0.11119],[0.0148,11.1430,0.11164],[0.0087,11.3462,0.11211],
+        [0.0029,11.5486,0.11261],[-0.0028,11.7504,0.11314],[-0.0083,11.9514,0.11370],
+        [-0.0137,12.1515,0.11429]
+      ],
+      length:[
+        [1,49.8842,0.03795],[1,54.7244,0.03557],[1,58.4249,0.03424],[1,61.4292,0.03328],
+        [1,63.8860,0.03257],[1,65.9026,0.03204],[1,67.6236,0.03165],[1,69.1645,0.03139],
+        [1,70.5994,0.03124],[1,71.9687,0.03117],[1,73.2812,0.03118],[1,74.5388,0.03125],
+        [1,75.7488,0.03137],[1,76.9186,0.03154],[1,78.0497,0.03174],[1,79.1458,0.03197],
+        [1,80.2113,0.03222],[1,81.2487,0.03250],[1,82.2587,0.03279],[1,83.2418,0.03310],
+        [1,84.1996,0.03342],[1,85.1348,0.03376],[1,86.0477,0.03410],[1,86.9410,0.03445],
+        [1,87.8161,0.03479]
+      ],
+      head:[
+        [1,34.4618,0.03686],[1,37.2759,0.03133],[1,39.1285,0.02997],[1,40.5135,0.02918],
+        [1,41.6317,0.02866],[1,42.5576,0.02832],[1,43.3306,0.02812],[1,43.9803,0.02800],
+        [1,44.5300,0.02795],[1,44.9998,0.02795],[1,45.4051,0.02798],[1,45.7573,0.02803],
+        [1,46.0661,0.02809],[1,46.3395,0.02815],[1,46.5844,0.02822],[1,46.8060,0.02829],
+        [1,47.0088,0.02836],[1,47.1962,0.02843],[1,47.3711,0.02850],[1,47.5357,0.02857],
+        [1,47.6919,0.02864],[1,47.8408,0.02871],[1,47.9833,0.02878],[1,48.1201,0.02884],
+        [1,48.2515,0.02891]
+      ]
+    },
+    girl: {
+      weight:[
+        [0.3809,3.2322,0.14171],[0.1714,4.1873,0.13724],[0.0962,5.1282,0.13000],
+        [0.0402,5.8458,0.12619],[-0.0050,6.4237,0.12402],[-0.0430,6.8985,0.12274],
+        [-0.0756,7.2970,0.12204],[-0.1039,7.6422,0.12178],[-0.1288,7.9487,0.12181],
+        [-0.1507,8.2254,0.12199],[-0.1700,8.4800,0.12223],[-0.1872,8.7192,0.12247],
+        [-0.2024,8.9481,0.12268],[-0.2158,9.1699,0.12283],[-0.2278,9.3870,0.12294],
+        [-0.2384,9.6008,0.12299],[-0.2478,9.8124,0.12303],[-0.2562,10.0226,0.12306],
+        [-0.2637,10.2315,0.12309],[-0.2703,10.4393,0.12315],[-0.2762,10.6464,0.12323],
+        [-0.2815,10.8534,0.12335],[-0.2862,11.0608,0.12350],[-0.2903,11.2688,0.12369],
+        [-0.2941,11.4775,0.12390]
+      ],
+      length:[
+        [1,49.1477,0.03790],[1,53.6872,0.03640],[1,57.0673,0.03568],[1,59.8029,0.03520],
+        [1,62.0899,0.03486],[1,64.0301,0.03463],[1,65.7311,0.03448],[1,67.2873,0.03441],
+        [1,68.7498,0.03440],[1,70.1435,0.03444],[1,71.4818,0.03452],[1,72.7710,0.03464],
+        [1,74.0150,0.03479],[1,75.2176,0.03496],[1,76.3817,0.03514],[1,77.5099,0.03534],
+        [1,78.6055,0.03555],[1,79.6710,0.03576],[1,80.7079,0.03598],[1,81.7182,0.03620],
+        [1,82.7036,0.03643],[1,83.6654,0.03666],[1,84.6040,0.03688],[1,85.5202,0.03711],
+        [1,86.4153,0.03734]
+      ],
+      head:[
+        [1,33.8787,0.03496],[1,36.5463,0.03210],[1,38.2521,0.03079],[1,39.5328,0.03002],
+        [1,40.5817,0.02942],[1,41.4590,0.02908],[1,42.1995,0.02881],[1,42.8290,0.02865],
+        [1,43.3671,0.02855],[1,43.8300,0.02849],[1,44.2319,0.02847],[1,44.5844,0.02846],
+        [1,44.8965,0.02846],[1,45.1752,0.02848],[1,45.4265,0.02850],[1,45.6551,0.02852],
+        [1,45.8650,0.02856],[1,46.0598,0.02859],[1,46.2424,0.02863],[1,46.4152,0.02867],
+        [1,46.5801,0.02871],[1,46.7384,0.02876],[1,46.8916,0.02881],[1,47.0402,0.02886],
+        [1,47.1847,0.02891]
+      ]
+    }
+  },
+  CDC: {
+    boy: {
+      weight:[
+        [0.5034,3.5302,0.13988],[0.2944,4.6577,0.12627],[0.1134,5.6892,0.11793],
+        [-0.036,6.5551,0.11221],[-0.167,7.2688,0.10838],[-0.286,7.8672,0.10600],
+        [-0.395,8.3781,0.10472],[-0.497,8.8208,0.10428],[-0.593,9.2110,0.10453],
+        [-0.683,9.5608,0.10534],[-0.770,9.8806,0.10657],[-0.853,10.1796,0.10810],
+        [-0.935,10.4660,0.10981],[-1.016,10.7476,0.11159],[-1.095,11.0316,0.11335],
+        [-1.173,11.3249,0.11504],[-1.249,11.6344,0.11663],[-1.324,11.9668,0.11810],
+        [-1.394,12.3277,0.11944],[-1.454,12.7217,0.12065],[-1.500,13.1515,0.12174],
+        [-1.527,13.6188,0.12270],[-1.534,14.1241,0.12356],[-1.523,14.6676,0.12430],
+        [-1.494,15.2493,0.12493]
+      ],
+      length:[
+        [1,50.5,0.038],[1,54.5,0.036],[1,58.1,0.034],[1,61.1,0.033],
+        [1,63.5,0.032],[1,65.7,0.032],[1,67.6,0.031],[1,69.2,0.031],
+        [1,70.6,0.031],[1,72.0,0.031],[1,73.3,0.031],[1,74.5,0.031],
+        [1,75.7,0.031],[1,76.9,0.031],[1,78.0,0.032],[1,79.1,0.032],
+        [1,80.2,0.032],[1,81.2,0.032],[1,82.2,0.033],[1,83.2,0.033],
+        [1,84.2,0.033],[1,85.1,0.034],[1,86.0,0.034],[1,86.9,0.034],
+        [1,87.8,0.034]
+      ],
+      head:[
+        [1,34.8,0.035],[1,37.6,0.031],[1,39.4,0.030],[1,40.8,0.029],
+        [1,41.9,0.028],[1,42.8,0.028],[1,43.6,0.028],[1,44.2,0.028],
+        [1,44.8,0.028],[1,45.3,0.028],[1,45.7,0.028],[1,46.1,0.028],
+        [1,46.4,0.028],[1,46.7,0.028],[1,47.0,0.028],[1,47.2,0.028],
+        [1,47.4,0.028],[1,47.6,0.028],[1,47.8,0.028],[1,48.0,0.028],
+        [1,48.2,0.028],[1,48.3,0.028],[1,48.5,0.028],[1,48.6,0.029],
+        [1,48.8,0.029]
+      ]
+    },
+    girl: {
+      weight:[
+        [0.3786,3.3988,0.14020],[0.1617,4.2672,0.13043],[-0.015,5.1232,0.12332],
+        [-0.160,5.8535,0.11814],[-0.278,6.4694,0.11446],[-0.377,6.9948,0.11191],
+        [-0.462,7.4483,0.11019],[-0.533,7.8452,0.10906],[-0.596,8.1985,0.10837],
+        [-0.653,8.5196,0.10799],[-0.705,8.8181,0.10786],[-0.755,9.1019,0.10793],
+        [-0.803,9.3777,0.10817],[-0.850,9.6506,0.10855],[-0.896,9.9243,0.10904],
+        [-0.940,10.2013,0.10961],[-0.982,10.4832,0.11026],[-1.021,10.7710,0.11096],
+        [-1.056,11.0655,0.11171],[-1.086,11.3683,0.11249],[-1.111,11.6817,0.11331],
+        [-1.131,12.0087,0.11416],[-1.144,12.3503,0.11504],[-1.149,12.7081,0.11595],
+        [-1.146,13.0831,0.11689]
+      ],
+      length:[
+        [1,49.9,0.038],[1,53.7,0.036],[1,57.1,0.035],[1,59.8,0.034],
+        [1,62.1,0.034],[1,64.0,0.034],[1,65.7,0.034],[1,67.3,0.034],
+        [1,68.7,0.034],[1,70.1,0.034],[1,71.5,0.034],[1,72.8,0.034],
+        [1,74.0,0.035],[1,75.2,0.035],[1,76.4,0.035],[1,77.5,0.035],
+        [1,78.6,0.035],[1,79.7,0.036],[1,80.7,0.036],[1,81.7,0.036],
+        [1,82.7,0.036],[1,83.7,0.037],[1,84.6,0.037],[1,85.5,0.037],
+        [1,86.4,0.037]
+      ],
+      head:[
+        [1,34.2,0.033],[1,36.8,0.031],[1,38.4,0.030],[1,39.6,0.029],
+        [1,40.7,0.029],[1,41.5,0.029],[1,42.2,0.029],[1,42.9,0.029],
+        [1,43.4,0.029],[1,43.9,0.028],[1,44.3,0.028],[1,44.6,0.028],
+        [1,44.9,0.028],[1,45.2,0.028],[1,45.5,0.028],[1,45.7,0.028],
+        [1,45.9,0.028],[1,46.1,0.028],[1,46.3,0.028],[1,46.4,0.029],
+        [1,46.6,0.029],[1,46.7,0.029],[1,46.9,0.029],[1,47.0,0.029],
+        [1,47.2,0.029]
+      ]
+    }
+  }
+};
+
+const METRIC_META = {
+  weight:{label:'Weight', unit:'kg', title:'Weight for age', icon:'⚖️'},
+  length:{label:'Length', unit:'cm', title:'Length for age', icon:'📏'},
+  head:  {label:'Head circ.', unit:'cm', title:'Head circumference for age', icon:'🧠'}
+};
+
+/* ---------- LMS helpers ---------- */
+function lmsValueAtZ(L,M,S,z){
+  if (L === 0) return M * Math.exp(S*z);
+  return M * Math.pow(1 + L*S*z, 1/L);
+}
+function zFromValue(L,M,S,x){
+  if (L === 0) return Math.log(x/M)/S;
+  return (Math.pow(x/M, L) - 1) / (L*S);
+}
+function normCdf(z){
+  const b1=0.319381530,b2=-0.356563782,b3=1.781477937,b4=-1.821255978,b5=1.330274429,p=0.2316419;
+  const t=1/(1+p*Math.abs(z));
+  const poly=((((b5*t+b4)*t+b3)*t+b2)*t+b1)*t;
+  const pdf=Math.exp(-z*z/2)/Math.sqrt(2*Math.PI);
+  const cdf = 1 - pdf*poly;
+  return z<0 ? 1-cdf : cdf;
+}
+function percentileFromValue(source, sex, metric, ageMonths, value){
+  const table = LMS[source][sex][metric];
+  if (!table || value==null) return null;
+  const a = Math.max(0, Math.min(ageMonths, table.length-1));
+  const i = Math.floor(a);
+  const f = a - i;
+  const row1 = table[i], row2 = table[Math.min(i+1, table.length-1)];
+  const L = row1[0] + (row2[0]-row1[0])*f;
+  const M = row1[1] + (row2[1]-row1[1])*f;
+  const S = row1[2] + (row2[2]-row1[2])*f;
+  const z = zFromValue(L,M,S,value);
+  return { z, pct: normCdf(z)*100 };
+}
+
+/* ---------- state ---------- */
+const LS_KEY = 'babyGrowthTracker_v1';
+const state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  }catch(e){}
+  return { name:'', sex:'boy', dob:'', source:'WHO', xAxis:'days', metric:'weight', entries:[], theme:'auto' };
+}
+function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+/* ---------- theme ---------- */
+function applyTheme(){
+  const stored = localStorage.getItem('theme-pref'); // 'dark'|'light'|null
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = stored ? stored==='dark' : prefersDark;
+  document.documentElement.classList.toggle('dark', dark);
+  if (chart) { applyChartTheme(); chart.update('none'); }
+}
+document.getElementById('themeToggle').addEventListener('click',()=>{
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('theme-pref', isDark ? 'light' : 'dark');
+  applyTheme();
+});
+
+/* ---------- date helpers ---------- */
+// Parse 'YYYY-MM-DD' as LOCAL midnight so timezone can't shift the calendar day.
+function parseDate(s){
+  if (!s) return null;
+  if (s instanceof Date) return s;
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function daysBetween(a,b){
+  const da = parseDate(a), db = parseDate(b);
+  return Math.round((db - da)/86400000);
+}
+function ageAt(date){
+  if (!state.dob) return {days:0, weeks:0, months:0};
+  const d = daysBetween(state.dob, date);
+  return { days:d, weeks:d/7, months:d/30.4375 };
+}
+function fmtAge(date){
+  const a = ageAt(date);
+  if (a.days < 0) return '—';
+  if (a.days < 14) return a.days + ' days new';
+  if (a.days < 90) return a.weeks.toFixed(1).replace(/\.0$/,'') + ' weeks';
+  const m = Math.floor(a.months);
+  const remW = Math.round((a.months - m)*4.345);
+  return remW > 0 ? `${m} mo ${remW} wk` : `${m} months`;
+}
+
+/* ---------- UI binding ---------- */
+const el = id => document.getElementById(id);
+function hydrate(){
+  el('babyName').value = state.name || '';
+  el('babySex').value = state.sex || 'boy';
+  el('babyDob').value = state.dob || '';
+  el('sourceSel').value = state.source || 'WHO';
+  el('xAxisSel').value = state.xAxis || 'months';
+  el('mDate').value = new Date().toISOString().slice(0,10);
+  updateTabs(); updateAgeBadge(); renderTable(); render(); renderMiniSummary();
+}
+function updateAgeBadge(){
+  const b = el('ageBadge');
+  if (!state.dob){ b.innerHTML = '<span class="muted">✨ add a date of birth to unlock charts</span>'; return; }
+  const today = new Date().toISOString().slice(0,10);
+  const a = ageAt(today);
+  const name = state.name ? `<b>${escapeHtml(state.name)}</b>` : 'Baby';
+  b.innerHTML = `${name} is <b>${fmtAge(today)}</b> old today <span class="muted">· ${a.days} days since ${state.dob}</span>`;
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function updateTabs(){
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.metric===state.metric);
+  });
+  el('chartTitle').textContent = METRIC_META[state.metric].title;
+}
+
+document.querySelectorAll('.tab-btn').forEach(b=>{
+  b.addEventListener('click',()=>{ state.metric=b.dataset.metric; saveState(); updateTabs(); render(); });
+});
+['babyName','babySex','babyDob','sourceSel','xAxisSel'].forEach(id=>{
+  el(id).addEventListener('input',e=>{
+    const key = id==='babyName'?'name': id==='babySex'?'sex': id==='babyDob'?'dob': id==='sourceSel'?'source':'xAxis';
+    state[key] = e.target.value; saveState(); updateAgeBadge(); renderTable(); render(); renderMiniSummary();
+  });
+});
+
+el('addBtn').addEventListener('click',()=>{
+  const d = el('mDate').value;
+  if (!d){ alert('Pick a date first 💗'); return; }
+  const entry = {
+    id: crypto.randomUUID(),
+    date: d,
+    weight: parseFloat(el('mWeight').value)||null,
+    length: parseFloat(el('mLength').value)||null,
+    head:   parseFloat(el('mHead').value)||null,
+    note:   el('mNote').value || ''
+  };
+  if (entry.weight==null && entry.length==null && entry.head==null){ alert('Add at least one measurement 🧸'); return; }
+  state.entries.push(entry);
+  state.entries.sort((a,b)=> a.date.localeCompare(b.date));
+  saveState();
+  el('mWeight').value=''; el('mLength').value=''; el('mHead').value=''; el('mNote').value='';
+  celebrate();
+  renderTable(); render(); renderMiniSummary();
+});
+el('clearFormBtn').addEventListener('click',()=>{
+  el('mWeight').value=''; el('mLength').value=''; el('mHead').value=''; el('mNote').value='';
+});
+el('exportBtn').addEventListener('click',()=>{
+  // Dump all of localStorage — future-proof if new keys get added.
+  const dump = { _meta: { app: 'little-one', version: 1, exportedAt: new Date().toISOString() } };
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    let v = localStorage.getItem(k);
+    try { v = JSON.parse(v); } catch(_){}
+    dump[k] = v;
+  }
+  const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `little-one-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+el('importBtn').addEventListener('click',()=> el('importFile').click());
+el('importFile').addEventListener('change',e=>{
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const parsed = JSON.parse(r.result);
+      if (parsed && typeof parsed==='object' && !Array.isArray(parsed)){
+        // Old format (direct state blob): has 'entries' at the top level
+        if (Array.isArray(parsed.entries) && 'sex' in parsed){
+          localStorage.setItem(LS_KEY, JSON.stringify(parsed));
+        } else {
+          // New format: map of localStorage keys → values (skip _meta)
+          Object.entries(parsed).forEach(([k,v])=>{
+            if (k.startsWith('_')) return;
+            const val = typeof v === 'string' ? v : JSON.stringify(v);
+            localStorage.setItem(k, val);
+          });
+        }
+        location.reload();
+      } else {
+        throw new Error('unexpected shape');
+      }
+    }catch(err){ alert('That file does not look like a valid backup.'); }
+  };
+  r.readAsText(f);
+});
+el('resetZoomBtn').addEventListener('click',()=>{ if (chart && chart.resetZoom) chart.resetZoom(); });
+el('resetBtn').addEventListener('click',()=>{
+  if (confirm('Delete all baby data? This cannot be undone.')){
+    localStorage.removeItem(LS_KEY);
+    location.reload();
+  }
+});
+
+/* cute floaty hearts when saving */
+function celebrate(){
+  for (let i=0;i<6;i++){
+    const s = document.createElement('div');
+    s.textContent = ['💖','✨','🌸','🎀','⭐'][Math.floor(Math.random()*5)];
+    s.style.cssText = `position:fixed;left:${40+Math.random()*30}%;top:60%;font-size:${16+Math.random()*14}px;pointer-events:none;z-index:9999;transition:all 1.4s ease-out;opacity:1`;
+    document.body.appendChild(s);
+    requestAnimationFrame(()=>{
+      s.style.top = (30+Math.random()*20)+'%';
+      s.style.left = (30+Math.random()*40)+'%';
+      s.style.opacity = '0';
+      s.style.transform = `rotate(${(Math.random()-.5)*60}deg) scale(${.8+Math.random()})`;
+    });
+    setTimeout(()=>s.remove(), 1500);
+  }
+}
+
+/* ---------- table ---------- */
+function renderTable(){
+  const tb = el('tbody');
+  el('entryCount').textContent = state.entries.length + ' ' + (state.entries.length===1?'entry':'entries');
+  if (!state.entries.length){
+    tb.innerHTML = `<tr><td colspan="10" class="muted text-center py-8">
+      <div class="text-3xl mb-2">🌱</div>
+      Nothing here yet — add your first measurement above to start the journey.
+    </td></tr>`;
+    return;
+  }
+  tb.innerHTML = state.entries.slice().reverse().map(e=>{
+    const age = ageAt(e.date);
+    const cell = (v, metric) => {
+      if (v==null) return '<td class="muted">—</td><td class="muted">—</td>';
+      let pct='—', cls='';
+      if (state.dob && age.months>=0 && age.months<=24){
+        const r = percentileFromValue(state.source, state.sex, metric, age.months, v);
+        if (r) {
+          pct = 'P'+r.pct.toFixed(0);
+          if (r.pct<3 || r.pct>97) cls='sun';
+          else if (r.pct>=25 && r.pct<=75) cls='mint';
+          else cls='sky';
+        }
+      }
+      return `<td>${v}</td><td><span class="chip ${cls}">${pct}</span></td>`;
+    };
+    return `<tr>
+      <td>${e.date}</td>
+      <td class="muted">${fmtAge(e.date)}</td>
+      ${cell(e.weight,'weight')}
+      ${cell(e.length,'length')}
+      ${cell(e.head,'head')}
+      <td class="muted">${escapeHtml(e.note||'')}</td>
+      <td><button class="btn btn-danger" data-del="${e.id}" title="Delete">✕</button></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      state.entries = state.entries.filter(x=>x.id!==btn.dataset.del);
+      saveState(); renderTable(); render(); renderMiniSummary();
+    });
+  });
+}
+
+/* ---------- mini summary ---------- */
+function renderMiniSummary(){
+  const box = el('miniSummary');
+  if (!state.entries.length){
+    box.innerHTML = '<div class="muted text-xs text-center">Your baby\'s stats will appear here after the first entry 🌼</div>';
+    return;
+  }
+  const last = state.entries[state.entries.length-1];
+  const first = state.entries[0];
+  const stat = (metric) => {
+    const last = [...state.entries].reverse().find(e=>e[metric]!=null);
+    if (!last) return null;
+    const a = ageAt(last.date);
+    let pct = null;
+    if (state.dob && a.months>=0 && a.months<=24) pct = percentileFromValue(state.source, state.sex, metric, a.months, last[metric]);
+    return { v:last[metric], date:last.date, pct };
+  };
+  const m = METRIC_META;
+  const row = (k) => {
+    const s = stat(k); if (!s) return '';
+    const pctTxt = s.pct ? `P${s.pct.pct.toFixed(0)}` : '—';
+    return `<div class="flex items-center justify-between py-1.5 text-sm">
+      <span>${m[k].icon} ${m[k].label}</span>
+      <span class="num"><b>${s.v} ${m[k].unit}</b> <span class="chip mint ml-1">${pctTxt}</span></span>
+    </div>`;
+  };
+  let gain = '';
+  const wFirst = state.entries.find(e=>e.weight!=null);
+  const wLast = [...state.entries].reverse().find(e=>e.weight!=null);
+  if (wFirst && wLast && wFirst !== wLast){
+    const days = daysBetween(wFirst.date, wLast.date) || 1;
+    const g = (wLast.weight - wFirst.weight) * 1000 / days;
+    gain = `<div class="chip sun mt-2">🌟 average gain ${g.toFixed(0)} g/day</div>`;
+  }
+  box.innerHTML = `
+    <div class="text-xs font-bold muted mb-1.5">Latest snapshot</div>
+    ${row('weight')}${row('length')}${row('head')}
+    ${gain}
+  `;
+}
+
+/* ---------- chart ---------- */
+let chart;
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function applyChartTheme(){
+  if (!chart) return;
+  const grid = cssVar('--chart-grid');
+  const ink  = cssVar('--ink');
+  const soft = cssVar('--ink-soft');
+  chart.options.scales.x.grid.color = grid;
+  chart.options.scales.y.grid.color = grid;
+  chart.options.scales.x.ticks.color = soft;
+  chart.options.scales.y.ticks.color = soft;
+  chart.options.scales.x.title.color = ink;
+  chart.options.scales.y.title.color = ink;
+  chart.options.plugins.legend.labels.color = ink;
+}
+
+function buildChart(){
+  const ctx = el('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type:'line',
+    data:{datasets:[]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'nearest', intersect:false},
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:10, font:{size:11, family:'Nunito', weight:'600'}, padding:14}},
+        zoom:{
+          pan:   { enabled:true, mode:'xy', modifierKey:null },
+          zoom:  {
+            wheel:{ enabled:true, speed:0.1 },
+            pinch:{ enabled:true },
+            drag: { enabled:false },
+            mode:'xy'
+          },
+          limits:{
+            x:{ min:'original', max:'original' },
+            y:{ min:'original', max:'original' }
+          }
+        },
+        tooltip:{
+          backgroundColor:'rgba(20,10,30,.92)',
+          titleFont:{family:'Nunito',weight:'700'},
+          bodyFont:{family:'Nunito'},
+          padding:10, cornerRadius:10,
+          callbacks:{
+            title:(items)=>{
+              const it = items[0];
+              if (state.xAxis==='date') return new Date(it.parsed.x).toLocaleDateString();
+              if (state.xAxis==='days') return `${Math.round(it.parsed.x)} days`;
+              return `${it.parsed.x.toFixed(1)} ${state.xAxis}`;
+            },
+            label:(it)=>{
+              const m = METRIC_META[state.metric];
+              return `${it.dataset.label}: ${it.parsed.y.toFixed(2)} ${m.unit}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x: {
+          type: state.xAxis==='date' ? 'time' : 'linear',
+          title:{display:true, text: state.xAxis==='months'?'Age (months)': state.xAxis==='weeks'?'Age (weeks)': state.xAxis==='days'?'Age (days)':'Date', font:{family:'Nunito', weight:'700', size:12}},
+          grid:{color:'rgba(0,0,0,.05)'},
+          ticks:{font:{family:'Nunito'}}
+        },
+        y: {
+          title:{display:true, text: `${METRIC_META[state.metric].label} (${METRIC_META[state.metric].unit})`, font:{family:'Nunito', weight:'700', size:12}},
+          grid:{color:'rgba(0,0,0,.05)'},
+          ticks:{font:{family:'Nunito'}}
+        }
+      }
+    }
+  });
+  applyChartTheme();
+}
+
+function xForAgeMonths(m){
+  if (state.xAxis==='months') return m;
+  if (state.xAxis==='weeks')  return m * 4.345;
+  if (state.xAxis==='days')   return m * 30.4375;
+  if (!state.dob) return m;
+  const dob = parseDate(state.dob);
+  return new Date(dob.getTime() + Math.round(m*30.4375)*86400000);
+}
+
+function render(){
+  if (!chart) buildChart();
+  const metric = state.metric;
+  const table = LMS[state.source][state.sex][metric];
+  const primary = cssVar('--primary');
+  const accent  = cssVar('--accent');
+  const mint    = cssVar('--mint');
+  const soft    = cssVar('--ink-soft');
+  const bandFill = cssVar('--chart-band');
+
+  // percentile curves (filled band between p3 & p97, plus lines)
+  const pcurve = (z) => table.map((row, m)=>({ x: xForAgeMonths(m), y: lmsValueAtZ(row[0],row[1],row[2], z) }));
+
+  const datasets = [];
+
+  // band fill (between P3 and P97)
+  datasets.push({
+    label: 'P97',
+    data: pcurve(1.881),
+    borderColor: 'transparent',
+    backgroundColor: bandFill,
+    pointRadius: 0, fill: '+1', tension: .35, order: 5
+  });
+  datasets.push({
+    label: 'P3',
+    data: pcurve(-1.881),
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    pointRadius: 0, fill: false, tension: .35, order: 5
+  });
+
+  // dashed lines for 10/25/75/90
+  [
+    {z:-1.282, p:10, c:soft, dash:[3,4]},
+    {z:-0.674, p:25, c:soft, dash:[2,4]},
+    {z: 0.674, p:75, c:soft, dash:[2,4]},
+    {z: 1.282, p:90, c:soft, dash:[3,4]},
+  ].forEach(p=>{
+    datasets.push({
+      label:`P${p.p}`,
+      data: pcurve(p.z),
+      borderColor: p.c, borderWidth: 1, borderDash: p.dash,
+      pointRadius: 0, fill:false, tension:.35, order: 4
+    });
+  });
+
+  // outer P3/P97 thin lines
+  datasets.push({ label:'P3 ', data: pcurve(-1.881), borderColor: soft, borderWidth: 1.2, borderDash: [6,4], pointRadius:0, fill:false, tension:.35, order:3 });
+  datasets.push({ label:'P97 ', data: pcurve(1.881), borderColor: soft, borderWidth: 1.2, borderDash: [6,4], pointRadius:0, fill:false, tension:.35, order:3 });
+
+  // P50 median - the hero curve
+  datasets.push({
+    label:'P50 median',
+    data: pcurve(0),
+    borderColor: mint,
+    borderWidth: 2.5,
+    pointRadius: 0, fill:false, tension:.35, order:2
+  });
+
+  // entries
+  if (state.dob){
+    const entryPts = state.entries
+      .filter(e=> e[metric]!=null)
+      .map(e=>{
+        const a = ageAt(e.date);
+        return { x: xForAgeMonths(a.months), y: e[metric] };
+      });
+    datasets.push({
+      label: `${state.name || 'Baby'}`,
+      data: entryPts,
+      borderColor: primary,
+      backgroundColor: primary,
+      borderWidth: 2.5,
+      pointRadius: 6,
+      pointHoverRadius: 9,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: primary,
+      pointBorderWidth: 2.5,
+      showLine: true,
+      tension: .25,
+      order: 1
+    });
+  }
+
+  chart.options.scales.x.type = state.xAxis==='date' ? 'time' : 'linear';
+  chart.options.scales.x.title.text = state.xAxis==='months'?'Age (months)': state.xAxis==='weeks'?'Age (weeks)': state.xAxis==='days'?'Age (days)':'Date';
+  chart.options.scales.y.title.text = `${METRIC_META[metric].label} (${METRIC_META[metric].unit})`;
+  chart.data.datasets = datasets;
+  applyChartTheme();
+  chart.update('none');
+
+  // latest stat
+  const latest = [...state.entries].reverse().find(e=>e[metric]!=null);
+  if (latest && state.dob){
+    const a = ageAt(latest.date);
+    const r = percentileFromValue(state.source, state.sex, metric, a.months, latest[metric]);
+    el('latestStat').innerHTML = r
+      ? `Latest <b>${latest[metric]} ${METRIC_META[metric].unit}</b> at ${fmtAge(latest.date)} <span class="chip mint ml-1">P${r.pct.toFixed(0)}</span>`
+      : `Latest <b>${latest[metric]} ${METRIC_META[metric].unit}</b>`;
+  } else {
+    el('latestStat').textContent = '';
+  }
+}
+
+applyTheme();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ if (!localStorage.getItem('theme-pref')) applyTheme(); });
+hydrate();
+
+/* ---------- service worker (PWA offline) ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
