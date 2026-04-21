@@ -61,15 +61,39 @@
     --chart-band: rgba(249,168,212,.08);
   }
   html, body { background: var(--bg); color: var(--ink); font-family: 'Nunito', system-ui, sans-serif; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     background-image:
       radial-gradient(1200px 600px at 85% -10%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 60%),
       radial-gradient(900px 500px at -10% 110%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%);
     min-height: 100vh;
+    overflow-x: hidden;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+  }
+  /* ── Mobile safety ── */
+  @media (max-width: 640px) {
+    input, select, textarea { font-size: 16px !important; } /* prevent iOS zoom-on-focus */
+    .fld { padding: .55rem .7rem; }
+    input[type="number"], input[type="text"], input[type="date"] {
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box;
+    }
+    .card { padding: 1rem !important; border-radius: 18px; }
+    .serif.text-3xl { font-size: 1.55rem !important; }
+    .serif.text-xl { font-size: 1.1rem !important; }
+    /* Tabs should wrap & shrink cleanly, not overflow */
+    .tab-btn { padding: .45rem .75rem; font-size: .8rem; }
+    /* Give the chart more breathing room */
+    canvas { max-width: 100%; }
+  }
+  @media (max-width: 380px) {
+    .max-w-7xl { padding-left: .75rem !important; padding-right: .75rem !important; }
+    /* On very narrow screens, let the 3-col weight/length/head form stack 1 row of 3 with smaller text */
+    .grid.grid-cols-3 > label .fld { font-size: .85rem !important; padding: .45rem .5rem; }
   }
   .serif { font-family: 'Fraunces', serif; font-optical-sizing:auto; letter-spacing:-.01em; }
   .card {

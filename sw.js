@@ -1,5 +1,5 @@
 // Bump this when any asset changes to force the next load to refresh.
-const CACHE = 'little-one-v1';
+const CACHE = 'little-one-v2';
 
 const LOCAL_ASSETS = [
   './',
