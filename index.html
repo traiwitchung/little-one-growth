@@ -82,11 +82,17 @@
       min-width: 0 !important;
       box-sizing: border-box;
     }
-    /* Date inputs render chunky on iOS — trim padding and cap width */
+    /* Date inputs on iOS: stop them rendering chunky & stretched */
     input[type="date"].fld {
-      padding: .4rem .6rem;
-      min-height: 36px;
-      max-width: 180px;
+      padding: .45rem .7rem !important;
+      min-height: 38px;
+      width: auto !important;
+      max-width: 180px !important;
+      text-align: left;
+    }
+    input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: .55; cursor: pointer; margin-left: auto;
     }
     .card { padding: 1rem !important; border-radius: 18px; }
     .serif.text-3xl { font-size: 1.55rem !important; }
@@ -591,7 +597,9 @@ function ageAt(date){
 function fmtAge(date){
   const a = ageAt(date);
   if (a.days < 0) return '—';
-  if (a.days < 14) return a.days + ' days new';
+  if (a.days === 0) return 'newborn';
+  if (a.days === 1) return '1 day';
+  if (a.days < 14) return a.days + ' days';
   if (a.days < 90) return a.weeks.toFixed(1).replace(/\.0$/,'') + ' weeks';
   const m = Math.floor(a.months);
   const remW = Math.round((a.months - m)*4.345);
@@ -615,7 +623,9 @@ function updateAgeBadge(){
   const today = new Date().toISOString().slice(0,10);
   const a = ageAt(today);
   const name = state.name ? `<b>${escapeHtml(state.name)}</b>` : 'Baby';
-  b.innerHTML = `${name} is <b>${fmtAge(today)}</b> old today <span class="muted">· ${a.days} days since ${state.dob}</span>`;
+  const ageTxt = fmtAge(today);
+  const connector = (ageTxt === 'newborn') ? '' : ' old today';
+  b.innerHTML = `${name} is <b>${ageTxt}</b>${connector} <span class="muted">· ${a.days} days since ${state.dob}</span>`;
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function updateTabs(){
@@ -837,7 +847,13 @@ function buildChart(){
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'nearest', intersect:false},
       plugins:{
-        legend:{position:'bottom', labels:{boxWidth:10, font:{size:11, family:'Nunito', weight:'600'}, padding:14}},
+        legend:{
+          position:'bottom',
+          labels:{
+            boxWidth:10, font:{size:11, family:'Nunito', weight:'600'}, padding:14,
+            filter: (item) => !item.text.startsWith('_')
+          }
+        },
         zoom:{
           pan:   { enabled:true, mode:'xy', modifierKey:null },
           zoom:  {
@@ -856,6 +872,7 @@ function buildChart(){
           titleFont:{family:'Nunito',weight:'700'},
           bodyFont:{family:'Nunito'},
           padding:10, cornerRadius:10,
+          filter: (item) => !item.dataset.label.startsWith('_'),
           callbacks:{
             title:(items)=>{
               const it = items[0];
@@ -912,42 +929,40 @@ function render(){
 
   const datasets = [];
 
-  // band fill (between P3 and P97)
+  // Hidden band fill — labels prefixed with '_' so the legend filter drops them.
   datasets.push({
-    label: 'P97',
+    label: '_bandTop',
     data: pcurve(1.881),
     borderColor: 'transparent',
     backgroundColor: bandFill,
     pointRadius: 0, fill: '+1', tension: .35, order: 5
   });
   datasets.push({
-    label: 'P3',
+    label: '_bandBot',
     data: pcurve(-1.881),
     borderColor: 'transparent',
     backgroundColor: 'transparent',
     pointRadius: 0, fill: false, tension: .35, order: 5
   });
 
-  // dashed lines for 10/25/75/90
+  // Visible percentile lines — one per percentile, no duplicates.
   [
-    {z:-1.282, p:10, c:soft, dash:[3,4]},
-    {z:-0.674, p:25, c:soft, dash:[2,4]},
-    {z: 0.674, p:75, c:soft, dash:[2,4]},
-    {z: 1.282, p:90, c:soft, dash:[3,4]},
+    {z:-1.881, p:3,  c:soft, dash:[6,4], width:1.2},
+    {z:-1.282, p:10, c:soft, dash:[3,4], width:1},
+    {z:-0.674, p:25, c:soft, dash:[2,4], width:1},
+    {z: 0.674, p:75, c:soft, dash:[2,4], width:1},
+    {z: 1.282, p:90, c:soft, dash:[3,4], width:1},
+    {z: 1.881, p:97, c:soft, dash:[6,4], width:1.2},
   ].forEach(p=>{
     datasets.push({
       label:`P${p.p}`,
       data: pcurve(p.z),
-      borderColor: p.c, borderWidth: 1, borderDash: p.dash,
+      borderColor: p.c, borderWidth: p.width, borderDash: p.dash,
       pointRadius: 0, fill:false, tension:.35, order: 4
     });
   });
 
-  // outer P3/P97 thin lines
-  datasets.push({ label:'P3 ', data: pcurve(-1.881), borderColor: soft, borderWidth: 1.2, borderDash: [6,4], pointRadius:0, fill:false, tension:.35, order:3 });
-  datasets.push({ label:'P97 ', data: pcurve(1.881), borderColor: soft, borderWidth: 1.2, borderDash: [6,4], pointRadius:0, fill:false, tension:.35, order:3 });
-
-  // P50 median - the hero curve
+  // P50 median — the hero curve
   datasets.push({
     label:'P50 median',
     data: pcurve(0),
